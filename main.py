@@ -29,6 +29,8 @@ PATH_TO_LABELS = os.path.join('data', 'mscoco_label_map.pbtxt')
 
 NUM_CLASSES = 10
 
+Detect_FPS = 40
+
 if not os.path.isfile(MODEL_FILE):
     print('downloading pretrained model!')
     print(MODEL_FILE)
@@ -57,10 +59,13 @@ def load_image_into_numpy_array(image):
     (im_width, im_height) = image.size
     return np.array(image.getdata()).reshape((im_height, im_width, 3)).astype(np.uint8)
 
-def violation_judgement(people_list, vehicles_list):
+def violation_judgement(people_list, vehicles_list, timeStamp):
+    print("================ timeStamp: " + str(timeStamp) + "s ================")
+    print("----------    people_list   -----------")
     print(people_list)
+    print("----------   vehicles_list  -----------")
     print(vehicles_list)
-    pass
+    print("================================================================\n\n")
 
 def process_frames(car_detect_threshold = 0.5,
                   people_detect_threshold = 0.2,
@@ -75,6 +80,7 @@ def process_frames(car_detect_threshold = 0.5,
         with tf.Session(graph=detection_graph) as sess:
             people_list = []
             vehicles_list = []
+            timeStamp = 0.0;
             for image_path in sorted(os.listdir(TEST_IMAGE_PATHS)):
                 image = Image.open('tmp/' + image_path)
                 # the array based representation of the image will be used later in order to prepare the
@@ -96,31 +102,31 @@ def process_frames(car_detect_threshold = 0.5,
                     feed_dict={image_tensor: image_np_expanded})
 
                 ### get people and vehicles
-                print(boxes.shape)
-                print(scores.shape)
-                print(classes.shape)
-                print(num_detections)
-                if True:
-                    people = []
-                    vehicles = []
-                    _boxes, _scores, _classes = [[0,0,0,0],[0,0,0,0]],[0,0],[0,0]
-                    for box, score, c in zip(boxes[0], scores[0], classes[0]):
-                        # print(box,score,c)
-                        ok = False
-                        if(c == 1 and score > people_detect_threshold):
-                            people.append(box)
-                            ok = True
-                        if((c == 3 or c==6 or c == 8) and score > car_detect_threshold):
-                            vehicles.append(boxes)
-                            ok = True
-                        if (ok):
-                            _boxes.append(box)
-                            _scores.append(score)
-                            _classes.append(c)
-                    boxes, scores, classes = np.array(_boxes), np.array(_scores), np.array(_classes)
-                    people_list.append(people)
-                    vehicles_list.append(vehicles)
-                    violation_judgement(people_list, vehicles_list)
+                # print(boxes.shape)
+                # print(scores.shape)
+                # print(classes.shape)
+                # print(num_detections)
+                timeStamp += 1.0/Detect_FPS
+                people = []
+                vehicles = []
+                _boxes, _scores, _classes = [[0,0,0,0],[0,0,0,0]],[0,0],[0,0]
+                for box, score, c in zip(boxes[0], scores[0], classes[0]):
+                    # print(box,score,c)
+                    ok = False
+                    if(c == 1 and score > people_detect_threshold):
+                        people.append(box)
+                        ok = True
+                    if((c == 3 or c==6 or c == 8) and score > car_detect_threshold):
+                        vehicles.append(box)
+                        ok = True
+                    if (ok):
+                        _boxes.append(box)
+                        _scores.append(score)
+                        _classes.append(c)
+                boxes, scores, classes = np.array(_boxes), np.array(_scores), np.array(_classes)
+                people_list.append(people)
+                vehicles_list.append(vehicles)
+                violation_judgement(people_list, vehicles_list, timeStamp)
 
                 # Visualization of the results of a detection.
                 # print(np.squeeze(boxes).shape)
@@ -139,7 +145,6 @@ def process_frames(car_detect_threshold = 0.5,
 
 
 def get_frames(video_path,
-               detect_fps = 2,
                max_video_frames=100,):
     if not os.path.isfile(video_path):
         print('Can not find ' + video_path)
@@ -151,7 +156,7 @@ def get_frames(video_path,
     cap = cv2.VideoCapture(video_path)
     fps = int(cap.get(cv2.CAP_PROP_FPS))
     inc_time = 1.0 / fps
-    sample_time = 1.0 / detect_fps
+    sample_time = 1.0 / Detect_FPS
     delay_time = 0
     cnt = 0
     while (cap.isOpened()):
@@ -165,12 +170,12 @@ def get_frames(video_path,
             # print(delay_time, sample_time,cnt)
             cv2.imwrite('tmp/%04d.jpg' % cnt, frame)
 
-def generate_video(detect_fps=2):
+def generate_video():
     import skvideo
     import skvideo.io
     img = cv2.imread('tmp2/' + os.listdir('tmp2')[0])
     fourcc = cv2.VideoWriter_fourcc('M','J','P','G')
-    out = cv2.VideoWriter('output.avi', fourcc, detect_fps, (img.shape[1], img.shape[0]), 1)
+    out = cv2.VideoWriter('output.avi', fourcc, Detect_FPS, (img.shape[1], img.shape[0]), 1)
     for img_name in sorted(os.listdir('tmp2')):
         frame = cv2.imread('tmp2/' + img_name)
         try:
@@ -181,6 +186,6 @@ def generate_video(detect_fps=2):
 
 if __name__ == '__main__':
     video_path = 'video/' + sys.argv[1]
-    get_frames(video_path, detect_fps=2, max_video_frames=1)
+    get_frames(video_path, max_video_frames=5)
     process_frames()
-    # generate_video(detect_fps=20)
+    # generate_video()
