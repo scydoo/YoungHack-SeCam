@@ -58,7 +58,8 @@ def load_image_into_numpy_array(image):
     return np.array(image.getdata()).reshape((im_height, im_width, 3)).astype(np.uint8)
 
 def violation_judgement(people_list, vehicles_list):
-    # TODO
+    print(people_list)
+    print(vehicles_list)
     pass
 
 def process_frames(car_detect_threshold = 0.5,
@@ -95,10 +96,10 @@ def process_frames(car_detect_threshold = 0.5,
                     feed_dict={image_tensor: image_np_expanded})
 
                 ### get people and vehicles
-                # print(boxes.shape)
-                # print(scores.shape)
-                # print(classes.shape)
-                # print(num_detections)
+                print(boxes.shape)
+                print(scores.shape)
+                print(classes.shape)
+                print(num_detections)
                 if True:
                     people = []
                     vehicles = []
@@ -107,7 +108,7 @@ def process_frames(car_detect_threshold = 0.5,
                         # print(box,score,c)
                         ok = False
                         if(c == 1 and score > people_detect_threshold):
-                            people.append(boxes)
+                            people.append(box)
                             ok = True
                         if((c == 3 or c==6 or c == 8) and score > car_detect_threshold):
                             vehicles.append(boxes)
@@ -134,7 +135,7 @@ def process_frames(car_detect_threshold = 0.5,
                     min_score_thresh=0.2)
                 plt.imshow(image_np)
                 plt.savefig('tmp2/' + image_path)
-                print '.',
+                print('.'),
 
 
 def get_frames(video_path,
@@ -148,7 +149,7 @@ def get_frames(video_path,
     os.mkdir('tmp')
 
     cap = cv2.VideoCapture(video_path)
-    fps = int(cap.get(cv2.cv.CV_CAP_PROP_FPS))
+    fps = int(cap.get(cv2.CAP_PROP_FPS))
     inc_time = 1.0 / fps
     sample_time = 1.0 / detect_fps
     delay_time = 0
@@ -168,8 +169,8 @@ def generate_video(detect_fps=2):
     import skvideo
     import skvideo.io
     img = cv2.imread('tmp2/' + os.listdir('tmp2')[0])
-    out = cv2.VideoWriter('output.mp4', -1, detect_fps, (img.shape[1], img.shape[0]), 1)
-    print(out)
+    fourcc = cv2.VideoWriter_fourcc('M','J','P','G')
+    out = cv2.VideoWriter('output.avi', fourcc, detect_fps, (img.shape[1], img.shape[0]), 1)
     for img_name in sorted(os.listdir('tmp2')):
         frame = cv2.imread('tmp2/' + img_name)
         try:
@@ -180,7 +181,6 @@ def generate_video(detect_fps=2):
 
 if __name__ == '__main__':
     video_path = 'video/' + sys.argv[1]
-    get_frames(video_path, detect_fps=2, max_video_frames=30)
+    get_frames(video_path, detect_fps=2, max_video_frames=1)
     process_frames()
-    generate_video(detect_fps=2)
-
+    # generate_video(detect_fps=20)
