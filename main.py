@@ -59,6 +59,44 @@ def load_image_into_numpy_array(image):
     (im_width, im_height) = image.size
     return np.array(image.getdata()).reshape((im_height, im_width, 3)).astype(np.uint8)
 
+def detect_Car(vehicles_list, tolerance):
+    length = len(vehicles_list)
+    for i in range(0, length):
+        print("*************a new frame**************")
+        print(i)
+        if vehicles_list[i]:
+            if i == 0:
+                for list in vehicles_list[0]:
+                    if list:
+                        print("detecting a car")
+            else:
+                for list in vehicles_list[i]:
+                    dis=1
+                    found = False
+                    while dis < 5 and found == False and (i - dis) >= 0:
+                        for ll in vehicles_list[i - dis]:
+                            if sameCar(list, ll, tolerance):
+                                found = True
+                                break
+                        if found:
+                            break
+                        dis = dis + 1
+                    if found == False:
+                        print("detecting a car")
+
+def sameCar(list1, list2, tolerance):
+
+    print(list1)
+    print("print***********************")
+    print(list2)
+    if list1[0] and list2[0]:
+        for i in range(0,4):
+        #print("compare")
+            if (abs(list1[i] - list2[i]) >= tolerance):
+                return False
+        return True
+    return False
+
 def violation_judgement(people_list, vehicles_list, timeStamp):
     return
     print("================ timeStamp: " + str(timeStamp) + "s ================")
@@ -67,6 +105,7 @@ def violation_judgement(people_list, vehicles_list, timeStamp):
     print("----------   vehicles_list  -----------")
     print(vehicles_list)
     print("================================================================\n\n")
+    detect_Car(vehicles_list, tolerance = 0.02)
 
 def process_frames(car_detect_threshold = 0.5,
                   people_detect_threshold = 0.2,
