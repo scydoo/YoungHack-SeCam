@@ -29,7 +29,7 @@ PATH_TO_LABELS = os.path.join('data', 'mscoco_label_map.pbtxt')
 
 NUM_CLASSES = 10
 
-Detect_FPS = 40
+Detect_FPS = 2
 
 if not os.path.isfile(MODEL_FILE):
     print('downloading pretrained model!')
@@ -60,6 +60,7 @@ def load_image_into_numpy_array(image):
     return np.array(image.getdata()).reshape((im_height, im_width, 3)).astype(np.uint8)
 
 def violation_judgement(people_list, vehicles_list, timeStamp):
+    return
     print("================ timeStamp: " + str(timeStamp) + "s ================")
     print("----------    people_list   -----------")
     print(people_list)
@@ -141,34 +142,34 @@ def process_frames(car_detect_threshold = 0.5,
                     min_score_thresh=0.2)
                 plt.imshow(image_np)
                 plt.savefig('tmp2/' + image_path)
-                print('.'),
 
 
 def get_frames(video_path,
                max_video_frames=100,):
     if not os.path.isfile(video_path):
-        print('Can not find ' + video_path)
-        return
+       print('Can not find ' + video_path)
+       sys.exit();
     if os.path.exists('tmp'):
-        shutil.rmtree('tmp')
+       shutil.rmtree('tmp')
     os.mkdir('tmp')
-
     cap = cv2.VideoCapture(video_path)
     fps = int(cap.get(cv2.CAP_PROP_FPS))
     inc_time = 1.0 / fps
     sample_time = 1.0 / Detect_FPS
-    delay_time = 0
+    delay_time = 0.0
     cnt = 0
     while (cap.isOpened()):
         ret, frame = cap.read()
+        if frame is None:
+            break
         delay_time += inc_time
         if(delay_time >= sample_time):
             cnt += 1
             if cnt > max_video_frames:
-                return
+                break
             delay_time -= sample_time
-            # print(delay_time, sample_time,cnt)
             cv2.imwrite('tmp/%04d.jpg' % cnt, frame)
+    cap.release()
 
 def generate_video():
     import skvideo
@@ -186,6 +187,7 @@ def generate_video():
 
 if __name__ == '__main__':
     video_path = 'video/' + sys.argv[1]
-    get_frames(video_path, max_video_frames=5)
+
+    get_frames(video_path, max_video_frames=40)
     process_frames()
-    # generate_video()
+    generate_video()
