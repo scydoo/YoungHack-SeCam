@@ -29,7 +29,7 @@ PATH_TO_LABELS = os.path.join('data', 'mscoco_label_map.pbtxt')
 
 NUM_CLASSES = 10
 
-Detect_FPS = 2
+Detect_FPS = 40
 
 if not os.path.isfile(MODEL_FILE):
     print('downloading pretrained model!')
@@ -59,14 +59,54 @@ def load_image_into_numpy_array(image):
     (im_width, im_height) = image.size
     return np.array(image.getdata()).reshape((im_height, im_width, 3)).astype(np.uint8)
 
+def detect_Car(vehicles_list, tolerance):
+    length = len(vehicles_list)
+    for i in range(0, length):
+        print("*************a new frame**************")
+        print(i)
+        if vehicles_list[i]:
+            if i == 0:
+                for list in vehicles_list[0]:
+                    if list[0]:
+                        print("detecting a car")
+            else:
+                for list in vehicles_list[i]:
+                    dis=1
+                    found = False
+                    while dis < 5 and found == False and (i - dis) >= 0:
+                        for ll in vehicles_list[i - dis]:
+                            if sameCar(list, ll, tolerance):
+                                found = True
+                                break
+                        if found:
+                            break
+                        dis = dis + 1
+                    if found == False:
+                        print("detecting a car")
+
+def sameCar(list1, list2, tolerance):
+
+    print(list1)
+    print("print***********************")
+    print(list2)
+    if list1[0] and list2[0]:
+        for i in range(0,4):
+        #print("compare")
+            if (abs(list1[i] - list2[i]) >= tolerance):
+                return False
+        return True
+    return False
+
+
 def violation_judgement(people_list, vehicles_list, timeStamp):
-    return
     print("================ timeStamp: " + str(timeStamp) + "s ================")
     print("----------    people_list   -----------")
-    print(people_list)
+    #print(people_list)
     print("----------   vehicles_list  -----------")
     print(vehicles_list)
     print("================================================================\n\n")
+    detect_Car(vehicles_list, tolerance = 0.05)
+
 
 def process_frames(car_detect_threshold = 0.5,
                   people_detect_threshold = 0.2,
@@ -114,6 +154,11 @@ def process_frames(car_detect_threshold = 0.5,
                 for box, score, c in zip(boxes[0], scores[0], classes[0]):
                     # print(box,score,c)
                     ok = False
+                    # ceiling the score
+                    print("score================================")
+                    score = score *100
+                    score = math.ceil(score)
+                    score = float(score) /100.00
                     if(c == 1 and score > people_detect_threshold):
                         people.append(box)
                         ok = True
@@ -142,34 +187,34 @@ def process_frames(car_detect_threshold = 0.5,
                     min_score_thresh=0.2)
                 plt.imshow(image_np)
                 plt.savefig('tmp2/' + image_path)
+                print('.'),
 
 
 def get_frames(video_path,
                max_video_frames=100,):
     if not os.path.isfile(video_path):
-       print('Can not find ' + video_path)
-       sys.exit();
+        print('Can not find ' + video_path)
+        return
     if os.path.exists('tmp'):
-       shutil.rmtree('tmp')
+        shutil.rmtree('tmp')
     os.mkdir('tmp')
+
     cap = cv2.VideoCapture(video_path)
     fps = int(cap.get(cv2.CAP_PROP_FPS))
     inc_time = 1.0 / fps
     sample_time = 1.0 / Detect_FPS
-    delay_time = 0.0
+    delay_time = 0
     cnt = 0
     while (cap.isOpened()):
         ret, frame = cap.read()
-        if frame is None:
-            break
         delay_time += inc_time
         if(delay_time >= sample_time):
             cnt += 1
             if cnt > max_video_frames:
-                break
+                return
             delay_time -= sample_time
+            # print(delay_time, sample_time,cnt)
             cv2.imwrite('tmp/%04d.jpg' % cnt, frame)
-    cap.release()
 
 def generate_video():
     import skvideo
@@ -187,7 +232,7 @@ def generate_video():
 
 if __name__ == '__main__':
     video_path = 'video/' + sys.argv[1]
-
-    get_frames(video_path, max_video_frames=40)
+    get_frames(video_path, max_video_frames=200)
     process_frames()
-    generate_video()
+    # generate_video()
+
